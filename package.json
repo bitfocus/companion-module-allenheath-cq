@@ -1,0 +1,20 @@
+{
+	"name": "allenheath-cq",
+	"version": "1.0.0",
+	"main": "index.js",
+	"type": "module",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/bitfocus/companion-module-allenheath-cq.git"
+	},
+	"license": "MIT",
+	"dependencies": {
+		"@companion-module/base": "^1.11.0"
+	},
+	"devDependencies": {
+		"@companion-module/tools": "^2.1.0"
+	}
+}
