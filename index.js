@@ -27,6 +27,8 @@ class GenericTcpUdpInstance extends InstanceBase {
     // Establish connection
     this.tcpClient.connect(this.config.port, this.config.host, () => {
       this.updateStatus(InstanceStatus.Ok);
+      this.fetchCurrentScene();
+      this.fetchAllMuteStatuses();
 
       // Clear any existing reconnect attempts on successful connection
       if (this.reconnectInterval) {
@@ -130,6 +132,23 @@ class GenericTcpUdpInstance extends InstanceBase {
     }
   }
 
+  async fetchAllMuteStatuses() {
+    for (let i = 0; i < muteParameters.length; i++) {
+      const {msb, lsb} = muteParameters[i];
+      const midiMessage = [
+        0xB0, 0x63, parseInt(msb, 16), 0xB0, 0x62, parseInt(lsb, 16), 0xB0,
+        0x60, 0x7F
+      ];
+      this.sendMIDIMessage(midiMessage);
+      await this.delay(50);
+    }
+  }
+
+  fetchCurrentScene() {
+    const midiMessage = [0xB0, 0x00, 0x00, 0xB0, 0x60, 0x7F];
+    this.sendMIDIMessage(midiMessage);
+  }
+
 
   hexToByteArray(hex) {
     const bytes = [];
@@ -150,6 +169,10 @@ class GenericTcpUdpInstance extends InstanceBase {
 
   getConfigFields() {
     return ConfigFields
+  }
+
+  delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 }
 
