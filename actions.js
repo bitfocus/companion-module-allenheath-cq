@@ -1,7 +1,5 @@
 import {dbValues, levelMatrixInputs, levelMatrixOutputs, muteParameters, panMatrix, panValues} from './helpers.js';
 
-
-
 function buildMuteMessage(msb, lsb, command) {
   const baseMessage =
       [0xB0, 0x63, parseInt(msb, 16), 0xB0, 0x62, parseInt(lsb, 16)];
@@ -70,6 +68,19 @@ export function getActionDefinitions(self) {
                   buildMuteMessage(muteParam.msb, muteParam.lsb, command);
 
               self.sendMIDIMessage(midiMessage);
+              self.log(
+                  'info', `Sent ${command} for channel: ${selectedChannel}`);
+              const midiMessageGet = [
+                0xB0, 0x63, parseInt(muteParam.msb, 16), 0xB0, 0x62,
+                parseInt(muteParam.lsb, 16), 0xB0, 0x60, 0x7F
+              ];
+              // The Mixer does not confirm the successful mute action,
+              // therefore get the current value after sending out the
+              // mute command.
+              self.sendMIDIMessage(midiMessageGet);
+              self.log(
+                  'info',
+                  `Sent get for channel ${selectedChannel} mute state.`);
             } else {
               self.log('error', `Channel ${selectedChannel} not found.`);
             }
@@ -254,6 +265,8 @@ export function getActionDefinitions(self) {
                   parseInt(channelData.lsb, 16), 0xB0, 0x06,
                   parseInt(volData.VC, 16), 0xB0, 0x26, parseInt(volData.VF, 16)
                 ];
+
+
 
                 self.sendMIDIMessage(midiMessage);
               }
@@ -446,11 +459,13 @@ export function getActionDefinitions(self) {
 
                 if (selectedScene < 1 || selectedScene > 100) return;
 
+                self.currentScene = selectedScene;
+                self.setVariableValues({activeScene: self.currentScene});
+                self.checkFeedbacks('sceneActive');
+
                 const midiMessage = [0xB0, 0x00, 0x00, 0xC0, selectedScene - 1];
 
                 self.sendMIDIMessage(midiMessage)
-
-                console.log('info', midiMessage)
               },
         },
         softkey: {

@@ -12,8 +12,26 @@ class GenericTcpUdpInstance extends InstanceBase {
     this.config = config;
     this.client = null;
     this.currentScene = null;
-    this.setVariableDefinitions(variables);
-    this.setVariableValues({activeScene: null});
+
+    // Add mute status variables
+    const muteVariableDefinitions =
+        muteParameters.map(param => ({
+                             variableId: `mute_${param.label}`,
+                             name: `Mute Status for ${param.label}`
+                           }));
+
+    // Merge with any other variable definitions you already have
+    const allVariableDefinitions = [...variables, ...muteVariableDefinitions];
+    this.setVariableDefinitions(allVariableDefinitions);
+
+    // Set initial values for all mute statuses (default is false)
+    const initialMuteValues = muteParameters.reduce((acc, param) => {
+      acc[`mute_${param.label}`] = param.state;
+      return acc;
+    }, {activeScene: null});
+
+    this.setVariableValues(initialMuteValues);
+
     this.setActionDefinitions(getActionDefinitions(this));
     this.setFeedbackDefinitions(getFeedbackDefinitions(this));
     this.connectMixer();
@@ -27,7 +45,6 @@ class GenericTcpUdpInstance extends InstanceBase {
     // Establish connection
     this.tcpClient.connect(this.config.port, this.config.host, () => {
       this.updateStatus(InstanceStatus.Ok);
-      this.fetchCurrentScene();
       this.fetchAllMuteStatuses();
 
       // Clear any existing reconnect attempts on successful connection
@@ -55,8 +72,8 @@ class GenericTcpUdpInstance extends InstanceBase {
 
     this.tcpClient.on('data', (data) => {
       let hexMessage = data.toString('hex');
-      console.log('Received data (hex):', hexMessage);
-      this.handleIncomingMessage(hexMessage);
+      // this.handleIncomingMessage(hexMessage);
+      this.parseIncomingMessages(hexMessage);
     });
   }
 
@@ -95,17 +112,45 @@ class GenericTcpUdpInstance extends InstanceBase {
       }
     }
   }
-  handleIncomingMessage(hexMessage) {
+  parseIncomingMessages(hexMessage) {
     const byteArray = this.hexToByteArray(hexMessage);
+    let i = 0;
 
+    while (i < byteArray.length) {
+      // Check for a Scene Change packet (5 bytes)
+      if (byteArray[i] === 0xB0 && byteArray[i + 1] === 0x00 &&
+          byteArray[i + 2] === 0x00 && byteArray[i + 3] === 0xC0) {
+        const scenePacket = byteArray.slice(i, i + 5);
+        this.handleIncomingMessage(scenePacket);
+        i += 5;  // Move past this scene change packet
+      }
+      // Check for a Mute Status packet (12 bytes sequence)
+      else if (
+          byteArray[i] === 0xB0 && byteArray[i + 1] === 0x63 &&  // MSB Header
+          byteArray[i + 3] === 0xB0 &&
+          byteArray[i + 4] === 0x62 &&  // LSB Header
+          byteArray[i + 6] === 0xB0 &&
+          byteArray[i + 7] === 0x06 &&  // Value 1 Header
+          byteArray[i + 9] === 0xB0 &&
+          byteArray[i + 10] === 0x26) {  // Value 2 Header
+
+        const mutePacket = byteArray.slice(i, i + 12);
+        this.handleIncomingMessage(mutePacket);
+        i += 12;  // Move past this mute status packet
+      }
+      // If no known pattern found, log the unknown part and move forward
+      else {
+        i++;  // Skip one byte and try to parse from the next one
+      }
+    }
+  }
+
+  handleIncomingMessage(byteArray) {
     // Handle Scene Change
     if (byteArray.length === 5) {
-      const statusByte = byteArray[0];
-      const sceneNumber = byteArray[4];
-
-      if ((statusByte & 0xF0) === 0xB0) {
-        this.currentScene = sceneNumber + 1;
-        console.log('Current scene loaded:', this.currentScene);
+      if (byteArray[0] == 0xB0 && byteArray[1] == 0x00 &&
+          byteArray[2] == 0x00 && byteArray[3] == 0xC0) {
+        this.currentScene = byteArray[4] + 1;
         this.setVariableValues({activeScene: this.currentScene});
         this.checkFeedbacks('sceneActive');
       }
@@ -125,10 +170,13 @@ class GenericTcpUdpInstance extends InstanceBase {
         if (parameter) {
           parameter.state = muteState === 1;
           console.log(`Mute state for ${parameter.label}:`, parameter.state);
-
+          this.setVariableValues(
+              {[`mute_${parameter.label}`]: parameter.state});
           this.checkFeedbacks('mute');
         }
       }
+    } else {
+      console.log('Received unknown package. Data (hex): ', hexMessage);
     }
   }
 
@@ -144,17 +192,15 @@ class GenericTcpUdpInstance extends InstanceBase {
     }
   }
 
-  fetchCurrentScene() {
-    const midiMessage = [0xB0, 0x00, 0x00, 0xB0, 0x60, 0x7F];
-    this.sendMIDIMessage(midiMessage);
-  }
-
 
   hexToByteArray(hex) {
     const bytes = [];
+
     for (let i = 0; i < hex.length; i += 2) {
-      bytes.push(parseInt(hex.substr(i, 2), 16));
+      // Use slice() instead of substr()
+      bytes.push(parseInt(hex.slice(i, i + 2), 16));
     }
+
     return bytes;
   }
 
