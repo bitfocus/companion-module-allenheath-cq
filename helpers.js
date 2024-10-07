@@ -467,7 +467,7 @@ export const levelMatrixInputs = [
   {
     label: 'USB',
     toLR: {msb: '40', lsb: '1C'},
-    toOut1: {msb: '43', lsb: '13'},
+    toOut1: {msb: '43', lsb: '14'},
     toOut2: {msb: '43', lsb: '15'},
     toOut3: {msb: '43', lsb: '16'},
     toOut4: {msb: '43', lsb: '17'},
