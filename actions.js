@@ -68,16 +68,12 @@ export function getActionDefinitions(self) {
                   buildMuteMessage(muteParam.msb, muteParam.lsb, command);
 
               self.sendMIDIMessage(midiMessage);
-              self.log(
-                  'info', `Sent ${command} for channel: ${selectedChannel}`);
-              const midiMessageGet = [
-                0xB0, 0x63, parseInt(muteParam.msb, 16), 0xB0, 0x62,
-                parseInt(muteParam.lsb, 16), 0xB0, 0x60, 0x7F
-              ];
+              self.log('info', `Sent ${command} for channel: ${selectedChannel}`);
               // The Mixer does not confirm the successful mute action,
               // therefore get the current value after sending out the
               // mute command.
-              self.sendMIDIMessage(midiMessageGet);
+              self.sendMIDIGetMessage(
+                  parseInt(muteParam.msb, 16), parseInt(muteParam.lsb, 16))
               self.log(
                   'info',
                   `Sent get for channel ${selectedChannel} mute state.`);
@@ -141,6 +137,7 @@ export function getActionDefinitions(self) {
                 ];
 
                 self.sendMIDIMessage(midiMessage)
+                self.sendMIDIGetMessage(parseInt(channelData.msb, 16), parseInt(channelData.lsb, 16))
               },
         },
         panBalanceRel: {
@@ -204,6 +201,9 @@ export function getActionDefinitions(self) {
                   0x00,
                 ];
                 self.sendMIDIMessage(midiMessage)
+                self.sendMIDIGetMessage(
+                    parseInt(channelData.msb, 16),
+                    parseInt(channelData.lsb, 16))
               },
         },
         volumeAbsInputs: {
@@ -266,9 +266,10 @@ export function getActionDefinitions(self) {
                   parseInt(volData.VC, 16), 0xB0, 0x26, parseInt(volData.VF, 16)
                 ];
 
-
-
                 self.sendMIDIMessage(midiMessage);
+                self.sendMIDIGetMessage(
+                    parseInt(channelData.msb, 16),
+                    parseInt(channelData.lsb, 16))
               }
 
         },
@@ -341,6 +342,10 @@ export function getActionDefinitions(self) {
                 ];
 
                 self.sendMIDIMessage(midiMessage)
+
+                self.sendMIDIGetMessage(
+                    parseInt(channelData.msb, 16),
+                    parseInt(channelData.lsb, 16))
               }
         },
         volumeAbsOutputs: {
@@ -384,6 +389,9 @@ export function getActionDefinitions(self) {
                 ];
 
                 self.sendMIDIMessage(midiMessage);
+                self.sendMIDIGetMessage(
+                    parseInt(channelData.msb, 16),
+                    parseInt(channelData.lsb, 16))
               }
 
         },
@@ -436,6 +444,9 @@ export function getActionDefinitions(self) {
                 ];
 
                 self.sendMIDIMessage(midiMessage)
+                self.sendMIDIGetMessage(
+                    parseInt(channelData.msb, 16),
+                    parseInt(channelData.lsb, 16))
               }
         },
         scene: {
@@ -466,6 +477,9 @@ export function getActionDefinitions(self) {
                 const midiMessage = [0xB0, 0x00, 0x00, 0xC0, selectedScene - 1];
 
                 self.sendMIDIMessage(midiMessage)
+                self.sendMIDIGetMessage(
+                    parseInt(channelData.msb, 16),
+                    parseInt(channelData.lsb, 16))
               },
         },
         softkey: {

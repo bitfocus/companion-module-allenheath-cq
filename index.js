@@ -4,7 +4,8 @@ import * as net from 'net';
 import {getActionDefinitions} from './actions.js'
 import {ConfigFields} from './config.js'
 import {getFeedbackDefinitions} from './feedbacks.js'
-import {muteParameters} from './helpers.js';
+import { getPresetDefinitions } from './presets.js';
+import {muteParameters, panMatrix, panValues, dbValues, levelMatrixInputs, levelMatrixOutputs} from './helpers.js';
 import {variables} from './variables.js';
 
 class GenericTcpUdpInstance extends InstanceBase {
@@ -20,8 +21,48 @@ class GenericTcpUdpInstance extends InstanceBase {
                              name: `Mute Status for ${param.label}`
                            }));
 
+    const panVariableDefinitions = panMatrix.flatMap(
+        param =>
+            [{
+              variableId: `pan_${param.label}_toLR`,
+              name: `Pan for ${param.label} to LR`
+            },
+             {
+               variableId: `pan_${param.label}_toOut12`,
+               name: `Pan for ${param.label} to Out 1-2`
+             },
+             {
+               variableId: `pan_${param.label}_toOut34`,
+               name: `Pan for ${param.label} to Out 3-4`
+             },
+             {
+               variableId: `pan_${param.label}_toOut56`,
+               name: `Pan for ${param.label} to Out 5-6`
+             }]);
+
+    const volumeVariableDefinitionsInputs = levelMatrixInputs.flatMap(input => {
+      const targets = Object.keys(input).filter(
+          key => key !== 'label');  // Get all keys except 'label'
+
+      // Create a variable definition for each target
+      return targets.map(
+          target => ({
+            variableId:
+                `volume_${input.label}_${target}`,  // Define unique variable ID
+            name:
+                `Volume for ${input.label} ${target}`  // Name for the variable
+          }));
+    });
+
+
+    const volumeVariableDefinitionsOutputs =
+        levelMatrixOutputs.map(param => ({
+                             variableId: `volume_${param.label}`,
+                             name: `Volume for ${param.label}`
+                           }));
+
     // Merge with any other variable definitions you already have
-    const allVariableDefinitions = [...variables, ...muteVariableDefinitions];
+    const allVariableDefinitions = [...variables, ...muteVariableDefinitions, ...panVariableDefinitions, ...volumeVariableDefinitionsInputs, ...volumeVariableDefinitionsOutputs];
     this.setVariableDefinitions(allVariableDefinitions);
 
     // Set initial values for all mute statuses (default is false)
@@ -34,6 +75,7 @@ class GenericTcpUdpInstance extends InstanceBase {
 
     this.setActionDefinitions(getActionDefinitions(this));
     this.setFeedbackDefinitions(getFeedbackDefinitions(this));
+    this.setPresetDefinitions(getPresetDefinitions(this));
     this.connectMixer();
   }
 
@@ -113,6 +155,7 @@ class GenericTcpUdpInstance extends InstanceBase {
     }
   }
   parseIncomingMessages(hexMessage) {
+    console.info('Received package. Data (hex): ', hexMessage);
     const byteArray = this.hexToByteArray(hexMessage);
     let i = 0;
 
@@ -140,9 +183,64 @@ class GenericTcpUdpInstance extends InstanceBase {
       }
       // If no known pattern found, log the unknown part and move forward
       else {
+        console.info("Could not parse message - unknown format. Skipping one byte and trying again.")
         i++;  // Skip one byte and try to parse from the next one
       }
     }
+  }
+
+  findNearestDBLabel(vc, vf) {
+    const data = (vc << 7) | vf;     // Calculate the input value
+    let nearest = null;              // To hold the nearest value
+    let nearestDistance = Infinity;  // To track the smallest distance
+
+    // Iterate over the dbValues array
+    dbValues.forEach(entry => {
+      // Convert VC and VF from hexadecimal strings to integers
+      const vcValue = parseInt(entry.VC, 16);
+      const vfValue = parseInt(entry.VF, 16);
+
+      // Calculate the combined value
+      const entryValue = (vcValue << 7) | vfValue;
+
+      // Calculate the distance from the input value
+      const distance = Math.abs(data - entryValue);
+
+      // Check if this entry is closer than the previous nearest
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearest = entry;  // Store the nearest entry
+      }
+    });
+
+    return nearest;  // Return the nearest db value entry
+  }
+
+  findNearestPanLabel(vc, vf) {
+    const data = (vc << 7) | vf;     // Calculate the input value
+    let nearest = null;              // To hold the nearest value
+    let nearestDistance = Infinity;  // To track the smallest distance
+
+    // Iterate over the dbValues array
+    panValues.forEach(entry => {
+      // Convert VC and VF from hexadecimal strings to integers
+      const vcValue = parseInt(entry.VC, 16);
+      const vfValue = parseInt(entry.VF, 16);
+
+      // Calculate the combined value
+      const entryValue = (vcValue << 7) | vfValue;
+
+      // Calculate the distance from the input value
+      const distance = Math.abs(data - entryValue);
+
+      // Check if this entry is closer than the previous nearest
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearest = entry;  // Store the nearest entry
+      }
+    });
+
+    return nearest;  // Return the nearest pan value entry
   }
 
   handleIncomingMessage(byteArray) {
@@ -155,30 +253,125 @@ class GenericTcpUdpInstance extends InstanceBase {
         this.checkFeedbacks('sceneActive');
       }
     }
-    // Handle Mute Status Messages
+    // Handle Parameter Status Messages (Mute, Volume, Pan)
     else if (byteArray.length === 12) {
-      if (byteArray[6] === 0xB0 && byteArray[7] === 0x06 &&
-          byteArray[8] === 0x00) {
-        const msb = byteArray[2];
-        const lsb = byteArray[5];
-        const muteState = byteArray[11];
+      const msb = byteArray[2];
+      const lsb = byteArray[5];
+      const valueCoarse = byteArray[8];
+      const valueFine = byteArray[11];
 
+      // Handle Mute Packets (MSB: 0x00 to 0x04)
+      if (msb >= 0x00 && msb <= 0x04) {
         const parameter = muteParameters.find(
-            param => param.msb === msb.toString(16).padStart(2, '0') &&
-                param.lsb === lsb.toString(16).padStart(2, '0'));
+            param =>
+                param.msb === msb.toString(16).padStart(2, '0').toUpperCase() &&
+                param.lsb === lsb.toString(16).padStart(2, '0').toUpperCase());
 
         if (parameter) {
+          const muteState = byteArray[11];
           parameter.state = muteState === 1;
-          console.log(`Mute state for ${parameter.label}:`, parameter.state);
           this.setVariableValues(
               {[`mute_${parameter.label}`]: parameter.state});
           this.checkFeedbacks('mute');
         }
       }
+      // Handle Volume Packets - Inputs and FX to Outputs and FX
+      else if (msb >= 0x40 && msb <= 0x4E) {
+        const parameter = levelMatrixInputs.find(
+            param => Object.values(param).some(
+                target => target.msb ===
+                        msb.toString(16).padStart(2, '0').toUpperCase() &&
+                    target.lsb ===
+                        lsb.toString(16).padStart(2, '0').toUpperCase()));
+
+        if (parameter) {
+          // Identify the specific target (e.g., toLR, toOut12, etc.)
+          const target = Object.keys(parameter).find(
+              key => parameter[key].msb ===
+                      msb.toString(16).padStart(2, '0').toUpperCase() &&
+                  parameter[key].lsb ===
+                      lsb.toString(16).padStart(2, '0').toUpperCase());
+
+          const nearestLabel = this.findNearestDBLabel(valueCoarse, valueFine);
+
+          if (target) {
+            // Set the volume value for the identified channel and target
+            this.setVariableValues(
+                {[`volume_${parameter.label}_${target}`]: nearestLabel.label});
+
+            // Log and update feedback for the volume control
+            console.log(
+                `Received level for ${parameter.label} ${target}:`,
+                nearestLabel.label, 'dB');
+          } else {
+            console.log('Did not find volume target.');
+          }
+        }
+      }
+      // Handle Volume Packets - Outputs, FX unit inputs, and DCAs
+      else if (msb == 0x4F) {
+        const parameter = levelMatrixOutputs.find(
+            param =>
+                param.msb === msb.toString(16).padStart(2, '0').toUpperCase() &&
+                param.lsb === lsb.toString(16).padStart(2, '0').toUpperCase());
+
+        if (parameter) {
+          const nearestLabel = this.findNearestDBLabel(valueCoarse, valueFine);
+
+          if (nearestLabel) {
+            // Set the volume value for the identified channel
+            this.setVariableValues(
+                {[`volume_${parameter.label}`]: nearestLabel.label});
+
+            // Log and update feedback for the volume control
+            console.log(
+                `Received level for ${parameter.label}:`, nearestLabel.label, 'dB');
+          } else {
+            console.log('Did not find volume label or volume target.');
+          }
+        }
+      }
+      // Handle Pan Packets (MSB: 0x50 to 0x56)
+      else if (msb >= 0x50 && msb <= 0x56) {
+        const parameter = panMatrix.find(
+            param => Object.values(param).some(
+                target => target.msb ===
+                        msb.toString(16).padStart(2, '0').toUpperCase() &&
+                    target.lsb ===
+                        lsb.toString(16).padStart(2, '0').toUpperCase()));
+
+        if (parameter) {
+          // Identify the specific target (e.g., toLR, toOut12, etc.)
+          const target = Object.keys(parameter).find(
+              key => parameter[key].msb ===
+                      msb.toString(16).padStart(2, '0').toUpperCase() &&
+                  parameter[key].lsb ===
+                      lsb.toString(16).padStart(2, '0').toUpperCase());
+
+          const nearestLabel = this.findNearestPanLabel(valueCoarse, valueFine);
+
+          if (nearestLabel && target) {
+            // Set the pan value for the identified channel and target
+            this.setVariableValues(
+                {[`pan_${parameter.label}_${target}`]: nearestLabel.label});
+
+            // Log and update feedback for the pan control
+            console.log(
+                `Pan level for ${parameter.label} ${target}:`, nearestLabel.label);
+            this.checkFeedbacks('pan');
+          } else {
+            console.log('Did not find pan value label or pan target.');
+          }
+        }
+      }
     } else {
-      console.log('Received unknown package. Data (hex): ', hexMessage);
+      console.log(
+          'Received unknown package. Data (hex): ',
+          byteArray.map(byte => byte.toString(16).padStart(2, '0')).join(' '));
     }
   }
+
+
 
   async fetchAllMuteStatuses() {
     for (let i = 0; i < muteParameters.length; i++) {
@@ -211,6 +404,15 @@ class GenericTcpUdpInstance extends InstanceBase {
     }
     let buffer = Buffer.from(hexMessage, 'hex');
     this.tcpClient.write(buffer);
+  }
+
+  sendMIDIGetMessage(msb, lsb) {
+    const midiMessage = [
+      0xB0, 0x63, parseInt(msb, 16), 0xB0, 0x62,
+      parseInt(lsb, 16), 0xB0, 0x60, 0x7F
+    ];
+
+    this.sendMIDIMessage(midiMessage)
   }
 
   getConfigFields() {
