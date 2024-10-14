@@ -20,9 +20,9 @@ export const muteParameters = [
   {label: 'USB', msb: '00', lsb: '1C', state: false},
   {label: 'BT', msb: '00', lsb: '1E', state: false},
   {label: 'FX1', msb: '00', lsb: '51', state: false},
-  {label: 'FX2', msb: '00', lsb: '3D', state: false},
-  {label: 'FX3', msb: '00', lsb: '3E', state: false},
-  {label: 'FX4', msb: '00', lsb: '3F', state: false},
+  {label: 'FX2', msb: '00', lsb: '52', state: false},
+  {label: 'FX3', msb: '00', lsb: '53', state: false},
+  {label: 'FX4', msb: '00', lsb: '54', state: false},
   {label: 'MainLR', msb: '00', lsb: '44', state: false},
   {label: 'Out1', msb: '00', lsb: '45', state: false},
   {label: 'Out2', msb: '00', lsb: '46', state: false},
@@ -617,3 +617,18 @@ export const panValues = [
   {label: 'R80%', VC: '73', VF: '18'},  {label: 'R90%', VC: '79', VF: '4B'},
   {label: 'R100%', VC: '7F', VF: '7F'}
 ];
+
+export function hexToByteArray(hex) {
+  const bytes = [];
+
+  for (let i = 0; i < hex.length; i += 2) {
+    // Use slice() instead of substr()
+    bytes.push(parseInt(hex.slice(i, i + 2), 16));
+  }
+
+  return bytes;
+};
+
+export function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}

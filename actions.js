@@ -55,7 +55,7 @@ export function getActionDefinitions(self) {
             },
           ],
       callback:
-          async (action, context) => {
+          async (action) => {
             const selectedChannel = action.options.channel;
             const command = action.options.command;
 
@@ -64,19 +64,10 @@ export function getActionDefinitions(self) {
                 muteParameters.find((param) => param.label === selectedChannel);
 
             if (muteParam) {
-              const midiMessage =
-                  buildMuteMessage(muteParam.msb, muteParam.lsb, command);
-
-              self.sendMIDIMessage(midiMessage);
-              self.log('info', `Sent ${command} for channel: ${selectedChannel}`);
-              // The Mixer does not confirm the successful mute action,
-              // therefore get the current value after sending out the
-              // mute command.
-              self.sendMIDIGetMessage(
+              self.mixer.setMuteStatus(muteParam.msb, muteParam.lsb, command);
+              
+              self.mixer.sendMIDIGetMessage(
                   parseInt(muteParam.msb, 16), parseInt(muteParam.lsb, 16))
-              self.log(
-                  'info',
-                  `Sent get for channel ${selectedChannel} mute state.`);
             } else {
               self.log('error', `Channel ${selectedChannel} not found.`);
             }
@@ -120,7 +111,7 @@ export function getActionDefinitions(self) {
                 },
               ],
           callback:
-              async (action, context) => {
+              async (action) => {
                 const selectedChannel = action.options.channel;
                 const target = action.options.target;
                 const panValue = action.options.value;
@@ -130,14 +121,7 @@ export function getActionDefinitions(self) {
                 const panData =
                     panValues.find((param) => param.label === panValue);
 
-                const midiMessage = [
-                  0xB0, 0x63, parseInt(channelData.msb, 16), 0xB0, 0x62,
-                  parseInt(channelData.lsb, 16), 0xB0, 0x06,
-                  parseInt(panData.VC, 16), 0xB0, 0x26, parseInt(panData.VF, 16)
-                ];
-
-                self.sendMIDIMessage(midiMessage)
-                self.sendMIDIGetMessage(parseInt(channelData.msb, 16), parseInt(channelData.lsb, 16))
+                self.mixer.setAbsValue(channelData.msb, channelData.lsb, panData.VC, panData.VF);
               },
         },
         panBalanceRel: {
@@ -179,7 +163,7 @@ export function getActionDefinitions(self) {
                 },
               ],
           callback:
-              async (action, context) => {
+              async (action) => {
                 const selectedChannel = action.options.channel;
                 const target = action.options.target;
                 const panDirection = action.options.direction;
@@ -187,23 +171,7 @@ export function getActionDefinitions(self) {
                 const channelData = panMatrix.find(
                     (param) => param.label === selectedChannel)[target];
 
-                const commandData = (panDirection == 'left' ? 0x61 : 0x60)
-
-                const midiMessage = [
-                  0xB0,
-                  0x63,
-                  parseInt(channelData.msb, 16),
-                  0xB0,
-                  0x62,
-                  parseInt(channelData.lsb, 16),
-                  0xB0,
-                  commandData,
-                  0x00,
-                ];
-                self.sendMIDIMessage(midiMessage)
-                self.sendMIDIGetMessage(
-                    parseInt(channelData.msb, 16),
-                    parseInt(channelData.lsb, 16))
+                self.mixer.setRelValue(channelData.msb, channelData.lsb, panDirection)
               },
         },
         volumeAbsInputs: {
@@ -250,7 +218,7 @@ export function getActionDefinitions(self) {
                 },
               ],
           callback:
-              async (action, context) => {
+              async (action) => {
                 const selectedChannel = action.options.channel;
                 const target = action.options.target;
                 const dBValue = action.options.value;
@@ -260,16 +228,7 @@ export function getActionDefinitions(self) {
                 const volData =
                     dbValues.find((param) => param.label === dBValue);
 
-                const midiMessage = [
-                  0xB0, 0x63, parseInt(channelData.msb, 16), 0xB0, 0x62,
-                  parseInt(channelData.lsb, 16), 0xB0, 0x06,
-                  parseInt(volData.VC, 16), 0xB0, 0x26, parseInt(volData.VF, 16)
-                ];
-
-                self.sendMIDIMessage(midiMessage);
-                self.sendMIDIGetMessage(
-                    parseInt(channelData.msb, 16),
-                    parseInt(channelData.lsb, 16))
+                self.mixer.setAbsValue(channelData.msb, channelData.lsb, volData.VC, volData.VF);
               }
 
         },
@@ -319,7 +278,7 @@ export function getActionDefinitions(self) {
                 },
               ],
           callback:
-              async (action, context) => {
+              async (action) => {
                 const selectedChannel = action.options.channel;
                 const target = action.options.target;
                 const volDirection = action.options.direction;
@@ -327,25 +286,7 @@ export function getActionDefinitions(self) {
                 const channelData = levelMatrixInputs.find(
                     (param) => param.label === selectedChannel)[target];
 
-                const commandData = (volDirection == 'increment' ? 0x60 : 0x61)
-
-                const midiMessage = [
-                  0xB0,
-                  0x63,
-                  parseInt(channelData.msb, 16),
-                  0xB0,
-                  0x62,
-                  parseInt(channelData.lsb, 16),
-                  0xB0,
-                  commandData,
-                  0x00,
-                ];
-
-                self.sendMIDIMessage(midiMessage)
-
-                self.sendMIDIGetMessage(
-                    parseInt(channelData.msb, 16),
-                    parseInt(channelData.lsb, 16))
+                self.setRelValue(channelData.msb, channelData.lsb, volDirection);
               }
         },
         volumeAbsOutputs: {
@@ -373,7 +314,7 @@ export function getActionDefinitions(self) {
                 },
               ],
           callback:
-              async (action, context) => {
+              async (action) => {
                 const selectedChannel = action.options.channel;
                 const dBValue = action.options.value;
 
@@ -382,16 +323,7 @@ export function getActionDefinitions(self) {
                 const volData =
                     dbValues.find((param) => param.label === dBValue);
 
-                const midiMessage = [
-                  0xB0, 0x63, parseInt(channelData.msb, 16), 0xB0, 0x62,
-                  parseInt(channelData.lsb, 16), 0xB0, 0x06,
-                  parseInt(volData.VC, 16), 0xB0, 0x26, parseInt(volData.VF, 16)
-                ];
-
-                self.sendMIDIMessage(midiMessage);
-                self.sendMIDIGetMessage(
-                    parseInt(channelData.msb, 16),
-                    parseInt(channelData.lsb, 16))
+                this.mixer.setAbsValue(channelData.msb, channelData.lsb, volData.VC, volData.VF);
               }
 
         },
@@ -422,31 +354,14 @@ export function getActionDefinitions(self) {
                 },
               ],
           callback:
-              async (action, context) => {
+              async (action) => {
                 const selectedChannel = action.options.channel;
                 const volDirection = action.options.direction;
 
                 const channelData = levelMatrixOutputs.find(
                     (param) => param.label === selectedChannel);
 
-                const commandData = (volDirection == 'increment' ? 0x60 : 0x61)
-
-                const midiMessage = [
-                  0xB0,
-                  0x63,
-                  parseInt(channelData.msb, 16),
-                  0xB0,
-                  0x62,
-                  parseInt(channelData.lsb, 16),
-                  0xB0,
-                  commandData,
-                  0x00,
-                ];
-
-                self.sendMIDIMessage(midiMessage)
-                self.sendMIDIGetMessage(
-                    parseInt(channelData.msb, 16),
-                    parseInt(channelData.lsb, 16))
+                this.mixer.setRelValue(channelData.msb, channelData.lsb, volDirection);
               }
         },
         scene: {
@@ -465,7 +380,7 @@ export function getActionDefinitions(self) {
 
               ],
           callback:
-              async (action, context) => {
+              async (action) => {
                 const selectedScene = action.options.scene;
 
                 if (selectedScene < 1 || selectedScene > 100) return;
@@ -474,13 +389,8 @@ export function getActionDefinitions(self) {
                 self.setVariableValues({activeScene: self.currentScene});
                 self.checkFeedbacks('sceneActive');
 
-                const midiMessage = [0xB0, 0x00, 0x00, 0xC0, selectedScene - 1];
-
-                self.sendMIDIMessage(midiMessage)
-                self.sendMIDIGetMessage(
-                    parseInt(channelData.msb, 16),
-                    parseInt(channelData.lsb, 16))
-              },
+                self.mixer.loadScene(selectedScene);
+              }
         },
         softkey: {
           name: 'Soft Key',
@@ -511,16 +421,11 @@ export function getActionDefinitions(self) {
 
               ],
           callback:
-              async (action, context) => {
+              async (action) => {
                 const selectedKey = action.options.target;
                 const selectedAction = action.options.action;
-
-                const midiMessage = [
-                  (selectedAction == 'press' ? 0x90 : 0x80),
-                  parseInt(selectedKey, 16),
-                  (selectedAction == 'press' ? 0x7F : 0x00)
-                ];
-                self.sendMIDIMessage(midiMessage)
+                
+                self.mixer.controlSoftKey(selectedKey, selectedAction)
               },
         },
   }
