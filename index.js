@@ -14,7 +14,24 @@ class GenericTcpUdpInstance extends InstanceBase {
     this.client = null;
     this.currentScene = null;
 
-    // Add mute status variables
+    
+
+    // Set initial values for all mute statuses (default is false)
+    const initialMuteValues = muteParameters.reduce((acc, param) => {
+      acc[`mute_${param.label}`] = param.state;
+      return acc;
+    }, {activeScene: null});
+
+    this.setVariableValues(initialMuteValues);
+    this.createVariableDefinitions();
+
+    this.setActionDefinitions(getActionDefinitions(this));
+    this.setFeedbackDefinitions(getFeedbackDefinitions(this));
+    this.setPresetDefinitions(getPresetDefinitions(this));
+    this.connectMixer();
+  }
+
+  createVariableDefinitions() {
     const muteVariableDefinitions =
         muteParameters.map(param => ({
                              variableId: `mute_${param.label}`,
@@ -57,26 +74,16 @@ class GenericTcpUdpInstance extends InstanceBase {
 
     const volumeVariableDefinitionsOutputs =
         levelMatrixOutputs.map(param => ({
-                             variableId: `volume_${param.label}`,
-                             name: `Volume for ${param.label}`
-                           }));
+                                 variableId: `volume_${param.label}`,
+                                 name: `Volume for ${param.label}`
+                               }));
 
     // Merge with any other variable definitions you already have
-    const allVariableDefinitions = [...variables, ...muteVariableDefinitions, ...panVariableDefinitions, ...volumeVariableDefinitionsInputs, ...volumeVariableDefinitionsOutputs];
+    const allVariableDefinitions = [
+      ...variables, ...muteVariableDefinitions, ...panVariableDefinitions,
+      ...volumeVariableDefinitionsInputs, ...volumeVariableDefinitionsOutputs
+    ];
     this.setVariableDefinitions(allVariableDefinitions);
-
-    // Set initial values for all mute statuses (default is false)
-    const initialMuteValues = muteParameters.reduce((acc, param) => {
-      acc[`mute_${param.label}`] = param.state;
-      return acc;
-    }, {activeScene: null});
-
-    this.setVariableValues(initialMuteValues);
-
-    this.setActionDefinitions(getActionDefinitions(this));
-    this.setFeedbackDefinitions(getFeedbackDefinitions(this));
-    this.setPresetDefinitions(getPresetDefinitions(this));
-    this.connectMixer();
   }
 
   connectMixer() {
