@@ -95,3 +95,4 @@
 
 1. When the module is sending out "GET" messages for the current mute state of Mute Groups or DCAs, the console always returns 'off' (fix by Allen & Heath needed, not a Companion related issue)
 2. Mute toggle is not working for DCAs and Mute Groups (fix by Allen & Heath needed, not a Companion related issue)
+3. The console has no function for lettig the Companion module get the currently active scene. Therefore after a scene is loaded from the Companion action, the module just assumes that the scene was loaded successfully (fix by Allen & Heath needed, not a Companion related issue).

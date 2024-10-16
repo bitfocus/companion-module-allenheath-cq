@@ -1,7 +1,6 @@
-export const variables =
-    [
-        {
-            name: 'Active Scene',
-            variableId: 'activeScene'
-        },
-    ]
+export const variables = [
+	{
+		name: 'Active Scene',
+		variableId: 'activeScene',
+	},
+]
