@@ -236,7 +236,7 @@ export function getActionDefinitions(self) {
 
 				const channelData = levelMatrixInputs.find((param) => param.label === selectedChannel)[target]
 
-				self.setRelValue(channelData.msb, channelData.lsb, volDirection)
+				self.mixer.setRelValue(channelData.msb, channelData.lsb, volDirection)
 			},
 		},
 		volumeAbsOutputs: {
@@ -269,7 +269,7 @@ export function getActionDefinitions(self) {
 				const channelData = levelMatrixOutputs.find((param) => param.label === selectedChannel)
 				const volData = dbValues.find((param) => param.label === dBValue)
 
-				this.mixer.setAbsValue(channelData.msb, channelData.lsb, volData.VC, volData.VF)
+				self.mixer.setAbsValue(channelData.msb, channelData.lsb, volData.VC, volData.VF)
 			},
 		},
 		volumeRelOutputs: {
@@ -302,7 +302,7 @@ export function getActionDefinitions(self) {
 
 				const channelData = levelMatrixOutputs.find((param) => param.label === selectedChannel)
 
-				this.mixer.setRelValue(channelData.msb, channelData.lsb, volDirection)
+				self.mixer.setRelValue(channelData.msb, channelData.lsb, volDirection)
 			},
 		},
 		scene: {

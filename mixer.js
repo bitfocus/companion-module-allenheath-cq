@@ -28,7 +28,7 @@ export class Mixer {
 		this.tcpClient = new net.Socket()
 		this.tcpClient.setKeepAlive(true)
 
-		this.tcpClient.connect(this.port, this.host, () => {
+		this.tcpClient.connect(this.port, this.ip, () => {
 			this.instanceContext.updateStatus(InstanceStatus.Ok)
 			console.info('Connected to mixer!')
 			this.fetchAllMuteStatuses()
