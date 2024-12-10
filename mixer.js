@@ -30,7 +30,6 @@ export class Mixer {
 
 		this.tcpClient.connect(this.port, this.ip, () => {
 			this.instanceContext.updateStatus(InstanceStatus.Ok)
-			console.info('Connected to mixer!')
 			this.fetchAllMuteStatuses()
 
 			if (this.reconnectInterval) {
@@ -89,7 +88,7 @@ export class Mixer {
 			const { msb, lsb } = muteParameters[i]
 			const midiMessage = [0xb0, 0x63, parseInt(msb, 16), 0xb0, 0x62, parseInt(lsb, 16), 0xb0, 0x60, 0x7f]
 			this.sendMIDIMessage(midiMessage)
-			await delay(50)
+			await delay(100)
 		}
 	}
 
