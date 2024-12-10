@@ -38,7 +38,7 @@ class GenericTcpUdpInstance extends InstanceBase {
 	createVariableDefinitions() {
 		const muteVariableDefinitions = muteParameters.map((param) => ({
 			variableId: `mute_${param.label}`,
-			name: `Mute Status for ${param.label}`,
+			name: `Mute State for ${param.label}`,
 		}))
 
 		const panVariableDefinitions = panMatrix.flatMap((param) => [
