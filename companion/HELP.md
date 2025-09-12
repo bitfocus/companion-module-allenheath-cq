@@ -62,13 +62,13 @@
 - **Action**: Sends a MIDI message to adjust volume.
 
 ### 8. Scene Change
-- **Description**: Load a scene on the SQ mixer.
+- **Description**: Load a scene on the CQ mixer.
 - **Options**:
   - Scene number (1-100).
 - **Action**: Sends a MIDI message to load the selected scene and updates the active scene feedback.
 
 ### 9. Soft Key Control
-- **Description**: Press or release a soft key on the SQ mixer.
+- **Description**: Press or release a soft key on the CQ mixer.
 - **Options**:
   - Soft Key selection: `Soft Key 1`, `Soft Key 2`, `Soft Key 3`.
   - Action: `Press`, `Release`.

@@ -4,7 +4,7 @@ export function getActionDefinitions(self) {
 	return {
 		mute: {
 			name: 'Mute',
-			description: 'Mute/Unmute a specific channel on the SQ ',
+			description: 'Mute/Unmute a specific channel on the CQ ',
 			options: [
 				{
 					type: 'dropdown',
@@ -307,7 +307,7 @@ export function getActionDefinitions(self) {
 		},
 		scene: {
 			name: 'Scene Change',
-			description: 'Load a scene on the SQ mixer',
+			description: 'Load a scene on the CQ mixer',
 			options: [
 				{
 					type: 'number',
@@ -332,7 +332,7 @@ export function getActionDefinitions(self) {
 		},
 		softkey: {
 			name: 'Soft Key',
-			description: 'Press or release a Soft Key on the SQ mixer',
+			description: 'Press or release a Soft Key on the CQ mixer',
 			options: [
 				{
 					type: 'dropdown',
