@@ -5,7 +5,7 @@ export const ConfigFields = [
 		type: 'textinput',
 		id: 'host',
 		label: 'Mixer IP',
-		tooltip: 'Enter the IP adress of the CQ mixer and make sure it is reachable from your network.',
+		tooltip: 'Enter the IP address of the CQ mixer and make sure it is reachable from your network.',
 		width: 8,
 		regex: Regex.IP,
 	},
