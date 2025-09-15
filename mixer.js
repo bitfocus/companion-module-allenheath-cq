@@ -237,13 +237,22 @@ export class Mixer {
 					)
 
 					const nearestLabel = this.findNearestDBLabel(valueCoarse, valueFine)
+					const percent = nearestLabel
+						? dbValues.findIndex((entry) => entry.label === nearestLabel.label) / (dbValues.length - 1)
+						: 0
 
 					if (target) {
 						this.instanceContext.setVariableValues({
 							[`volume_${parameter.label}_${target}`]: nearestLabel.label,
+							[`volume_${parameter.label}_${target}_percent`]: percent.toFixed(3),
 						})
 
-						console.log(`Received level for ${parameter.label} ${target}:`, nearestLabel.label, 'dB')
+						console.log(
+							`Received level for ${parameter.label} ${target}:`,
+							nearestLabel.label,
+							'dB',
+							`(${(percent * 100).toFixed(1)}%)`
+						)
 					} else {
 						console.log('Did not find volume target.')
 					}
@@ -259,11 +268,22 @@ export class Mixer {
 
 				if (parameter) {
 					const nearestLabel = this.findNearestDBLabel(valueCoarse, valueFine)
+					const percent = nearestLabel
+						? dbValues.findIndex((entry) => entry.label === nearestLabel.label) / (dbValues.length - 1)
+						: 0
 
 					if (nearestLabel) {
-						this.instanceContext.setVariableValues({ [`volume_${parameter.label}`]: nearestLabel.label })
+						this.instanceContext.setVariableValues({
+							[`volume_${parameter.label}`]: nearestLabel.label,
+							[`volume_${parameter.label}_percent`]: percent.toFixed(3),
+						})
 
-						console.log(`Received level for ${parameter.label}:`, nearestLabel.label, 'dB')
+						console.log(
+							`Received level for ${parameter.label}:`,
+							nearestLabel.label,
+							'dB',
+							`(${(percent * 100).toFixed(1)}%)`
+						)
 					} else {
 						console.log('Did not find volume label or volume target.')
 					}
