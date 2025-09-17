@@ -371,12 +371,12 @@ export class Mixer {
 		this.sendMIDIMessage(midiMessage)
 	}
 
-	sendMIDIMessage(hexMessage) {
+	sendMIDIMessage(message) {
 		if (!this.tcpClient || this.tcpClient.destroyed) {
 			console.log('warning', 'TCP connection is closed!')
 			return
 		}
-		let buffer = Buffer.from(hexMessage, 'hex')
+		let buffer = Buffer.from(message)
 		this.tcpClient.write(buffer)
 	}
 
