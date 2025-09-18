@@ -241,10 +241,14 @@ export class Mixer {
 					)
 
 					const nearestLabel = this.findNearestDBLabel(valueCoarse, valueFine)
+					const percent = nearestLabel
+						? dbValues.findIndex((entry) => entry.label === nearestLabel.label) / (dbValues.length - 1)
+						: 0
 
 					if (target) {
 						this.instanceContext.setVariableValues({
 							[`volume_${parameter.label}_${target}`]: nearestLabel.label,
+							[`volume_${parameter.label}_${target}_percent`]: percent.toFixed(3),
 						})
 
 						this.log('info', `Volume: ${parameter.label} -> ${target} = ${nearestLabel.label} dB`)
@@ -263,9 +267,15 @@ export class Mixer {
 
 				if (parameter) {
 					const nearestLabel = this.findNearestDBLabel(valueCoarse, valueFine)
+					const percent = nearestLabel
+						? dbValues.findIndex((entry) => entry.label === nearestLabel.label) / (dbValues.length - 1)
+						: 0
 
 					if (nearestLabel) {
-						this.instanceContext.setVariableValues({ [`volume_${parameter.label}`]: nearestLabel.label })
+						this.instanceContext.setVariableValues({
+							[`volume_${parameter.label}`]: nearestLabel.label,
+							[`volume_${parameter.label}_percent`]: percent.toFixed(3),
+						})
 
 						this.log('info', `Volume: ${parameter.label} = ${nearestLabel.label} dB`)
 					} else {
