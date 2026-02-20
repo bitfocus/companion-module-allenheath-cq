@@ -21,6 +21,7 @@ export class Mixer {
 		this.reconnectInterval = null
 		this.currentScene = null
 		this.instanceContext = instanceContext
+		this.log = instanceContext.log.bind(instanceContext)
 	}
 
 	connect() {
@@ -30,6 +31,7 @@ export class Mixer {
 
 		this.tcpClient.connect(this.port, this.ip, () => {
 			this.instanceContext.updateStatus(InstanceStatus.Ok)
+			this.log('info', `Connected to CQ mixer at ${this.ip}:${this.port}`)
 			this.fetchAllMuteStatuses()
 
 			if (this.reconnectInterval) {
@@ -39,7 +41,7 @@ export class Mixer {
 		})
 
 		this.tcpClient.on('error', (err) => {
-			console.error('TCP connection error:', err)
+			this.log('error', `CQ mixer connection error: ${err.message}`)
 			this.instanceContext.updateStatus(InstanceStatus.ConnectionFailure, err.message)
 
 			// Trigger reconnect if auto reconnect is enabled
@@ -47,7 +49,7 @@ export class Mixer {
 		})
 
 		this.tcpClient.on('close', () => {
-			console.log('Connection closed')
+			this.log('info', `CQ mixer connection closed`)
 			this.instanceContext.updateStatus(InstanceStatus.Disconnected)
 
 			this.setupReconnect()
@@ -77,7 +79,7 @@ export class Mixer {
 	setupReconnect() {
 		if (this.autoReconnect && !this.reconnectInterval) {
 			this.reconnectInterval = setInterval(() => {
-				console.log('Attempting to reconnect...')
+				this.log('info', `Attempting CQ mixer reconnect`)
 				this.connect()
 			}, 5000)
 		}
@@ -147,7 +149,7 @@ export class Mixer {
 	}
 
 	parseIncomingMessages(hexMessage) {
-		console.info('Received package. Data (hex): ', hexMessage)
+		this.log('debug', `Received MIDI message: ${hexMessage}`)
 		const byteArray = hexToByteArray(hexMessage)
 		let i = 0
 
@@ -182,7 +184,7 @@ export class Mixer {
 			}
 			// If no known pattern found, log the unknown part and move forward
 			else {
-				console.info('Could not parse message - unknown format. Skipping one byte and trying again.')
+				this.log('warning', `Unrecognized message format at byte ${i}: skipping byte and retrying`)
 				i++ // Skip one byte and try to parse from the next one
 			}
 		}
@@ -194,6 +196,7 @@ export class Mixer {
 			if (byteArray[0] == 0xb0 && byteArray[1] == 0x00 && byteArray[2] == 0x00 && byteArray[3] == 0xc0) {
 				this.currentScene = byteArray[4] + 1
 				this.instanceContext.setVariableValues({ activeScene: this.currentScene })
+				this.log('info', `Scene changed: Active scene is ${this.currentScene}`)
 				this.instanceContext.checkFeedbacks('sceneActive')
 			}
 		}
@@ -216,6 +219,7 @@ export class Mixer {
 					const muteState = byteArray[11]
 					parameter.state = muteState === 1
 					this.instanceContext.setVariableValues({ [`mute_${parameter.label}`]: parameter.state })
+					this.log('info', `Mute: ${parameter.label} = ${parameter.state ? 'muted' : 'unmuted'}`)
 					this.instanceContext.checkFeedbacks('mute')
 				}
 			}
@@ -247,14 +251,9 @@ export class Mixer {
 							[`volume_${parameter.label}_${target}_percent`]: percent.toFixed(3),
 						})
 
-						console.log(
-							`Received level for ${parameter.label} ${target}:`,
-							nearestLabel.label,
-							'dB',
-							`(${(percent * 100).toFixed(1)}%)`
-						)
+						this.log('info', `Volume: ${parameter.label} -> ${target} = ${nearestLabel.label} dB`)
 					} else {
-						console.log('Did not find volume target.')
+						this.log('warning', `Volume target not found (MSB:${msb}, LSB:${lsb})`)
 					}
 				}
 			}
@@ -278,14 +277,9 @@ export class Mixer {
 							[`volume_${parameter.label}_percent`]: percent.toFixed(3),
 						})
 
-						console.log(
-							`Received level for ${parameter.label}:`,
-							nearestLabel.label,
-							'dB',
-							`(${(percent * 100).toFixed(1)}%)`
-						)
+						this.log('info', `Volume: ${parameter.label} = ${nearestLabel.label} dB`)
 					} else {
-						console.log('Did not find volume label or volume target.')
+						this.log('warning', `Volume label not found (MSB:${msb}, LSB:${lsb})`)
 					}
 				}
 			}
@@ -314,18 +308,15 @@ export class Mixer {
 						this.instanceContext.setVariableValues({ [`pan_${parameter.label}_${target}`]: nearestLabel.label })
 
 						// Log and update feedback for the pan control
-						console.log(`Pan level for ${parameter.label} ${target}:`, nearestLabel.label)
+						this.log('info', `Pan: ${parameter.label} -> ${target} = ${nearestLabel.label}`)
 						this.instanceContext.checkFeedbacks('pan')
 					} else {
-						console.log('Did not find pan value label or pan target.')
+						this.log('warning', `Pan label or target not found (MSB:${msb}, LSB:${lsb})`)
 					}
 				}
 			}
 		} else {
-			console.log(
-				'Received unknown package. Data (hex): ',
-				byteArray.map((byte) => byte.toString(16).padStart(2, '0')).join(' ')
-			)
+			this.log('warning', `Unknown packet: ${byteArray.map((byte) => byte.toString(16).padStart(2, '0')).join(' ')}`)
 		}
 	}
 
@@ -393,9 +384,13 @@ export class Mixer {
 
 	sendMIDIMessage(hexMessage) {
 		if (!this.tcpClient || this.tcpClient.destroyed) {
-			console.log('warning', 'TCP connection is closed!')
+			this.log('warning', `MIDI send failed: CQ mixer connection is closed`)
 			return
 		}
+		this.log(
+			'debug',
+			`Sending MIDI message: ${typeof hexMessage === 'string' ? hexMessage : Buffer.from(hexMessage).toString('hex')}`
+		)
 		let buffer = Buffer.from(hexMessage, 'hex')
 		this.tcpClient.write(buffer)
 	}
