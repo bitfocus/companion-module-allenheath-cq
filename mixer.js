@@ -382,16 +382,16 @@ export class Mixer {
 		this.sendMIDIMessage(midiMessage)
 	}
 
-	sendMIDIMessage(hexMessage) {
+	sendMIDIMessage(message) {
 		if (!this.tcpClient || this.tcpClient.destroyed) {
 			this.log('warn', `MIDI send failed: CQ mixer connection is closed`)
 			return
 		}
-		/* this.log(
+    /* this.log(
 			'debug',
 			`Sending MIDI message: ${typeof hexMessage === 'string' ? hexMessage : Buffer.from(hexMessage).toString('hex')}`
 		) */
-		let buffer = Buffer.from(hexMessage, 'hex')
+		let buffer = Buffer.from(message)
 		this.tcpClient.write(buffer)
 	}
 
