@@ -149,7 +149,7 @@ export class Mixer {
 	}
 
 	parseIncomingMessages(hexMessage) {
-		this.log('debug', `Received MIDI message: ${hexMessage}`)
+		//this.log('debug', `Received MIDI message: ${hexMessage}`)
 		const byteArray = hexToByteArray(hexMessage)
 		let i = 0
 
@@ -387,10 +387,10 @@ export class Mixer {
 			this.log('warn', `MIDI send failed: CQ mixer connection is closed`)
 			return
 		}
-		this.log(
+		/* this.log(
 			'debug',
 			`Sending MIDI message: ${typeof hexMessage === 'string' ? hexMessage : Buffer.from(hexMessage).toString('hex')}`
-		)
+		) */
 		let buffer = Buffer.from(hexMessage, 'hex')
 		this.tcpClient.write(buffer)
 	}
