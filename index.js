@@ -64,16 +64,28 @@ class GenericTcpUdpInstance extends InstanceBase {
 			const targets = Object.keys(input).filter((key) => key !== 'label') // Get all keys except 'label'
 
 			// Create a variable definition for each target
-			return targets.map((target) => ({
-				variableId: `volume_${input.label}_${target}`, // Define unique variable ID
-				name: `Volume for ${input.label} ${target}`, // Name for the variable
-			}))
+			return targets.flatMap((target) => [
+				{
+					variableId: `volume_${input.label}_${target}`, // Define unique variable ID
+					name: `Volume for ${input.label} ${target}`, // Name for the variable
+				},
+				{
+					variableId: `volume_${input.label}_${target}_percent`, // Percent variable
+					name: `Volume Percent for ${input.label} ${target}`,
+				},
+			])
 		})
 
-		const volumeVariableDefinitionsOutputs = levelMatrixOutputs.map((param) => ({
-			variableId: `volume_${param.label}`,
-			name: `Volume for ${param.label}`,
-		}))
+		const volumeVariableDefinitionsOutputs = levelMatrixOutputs.flatMap((param) => [
+			{
+				variableId: `volume_${param.label}`,
+				name: `Volume for ${param.label}`,
+			},
+			{
+				variableId: `volume_${param.label}_percent`,
+				name: `Volume Percent for ${param.label}`,
+			},
+		])
 
 		// Merge with any other variable definitions you already have
 		const allVariableDefinitions = [
