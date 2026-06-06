@@ -184,7 +184,7 @@ export class Mixer {
 			}
 			// If no known pattern found, log the unknown part and move forward
 			else {
-				this.log('warning', `Unrecognized message format at byte ${i}: skipping byte and retrying`)
+				this.log('warn', `Unrecognized message format at byte ${i}: skipping byte and retrying`)
 				i++ // Skip one byte and try to parse from the next one
 			}
 		}
@@ -253,7 +253,7 @@ export class Mixer {
 
 						this.log('info', `Volume: ${parameter.label} -> ${target} = ${nearestLabel.label} dB`)
 					} else {
-						this.log('warning', `Volume target not found (MSB:${msb}, LSB:${lsb})`)
+						this.log('warn', `Volume target not found (MSB:${msb}, LSB:${lsb})`)
 					}
 				}
 			}
@@ -279,7 +279,7 @@ export class Mixer {
 
 						this.log('info', `Volume: ${parameter.label} = ${nearestLabel.label} dB`)
 					} else {
-						this.log('warning', `Volume label not found (MSB:${msb}, LSB:${lsb})`)
+						this.log('warn', `Volume label not found (MSB:${msb}, LSB:${lsb})`)
 					}
 				}
 			}
@@ -311,12 +311,12 @@ export class Mixer {
 						this.log('info', `Pan: ${parameter.label} -> ${target} = ${nearestLabel.label}`)
 						this.instanceContext.checkFeedbacks('pan')
 					} else {
-						this.log('warning', `Pan label or target not found (MSB:${msb}, LSB:${lsb})`)
+						this.log('warn', `Pan label or target not found (MSB:${msb}, LSB:${lsb})`)
 					}
 				}
 			}
 		} else {
-			this.log('warning', `Unknown packet: ${byteArray.map((byte) => byte.toString(16).padStart(2, '0')).join(' ')}`)
+			this.log('warn', `Unknown packet: ${byteArray.map((byte) => byte.toString(16).padStart(2, '0')).join(' ')}`)
 		}
 	}
 
@@ -384,7 +384,7 @@ export class Mixer {
 
 	sendMIDIMessage(hexMessage) {
 		if (!this.tcpClient || this.tcpClient.destroyed) {
-			this.log('warning', `MIDI send failed: CQ mixer connection is closed`)
+			this.log('warn', `MIDI send failed: CQ mixer connection is closed`)
 			return
 		}
 		this.log(
